@@ -1,6 +1,5 @@
 <p align="center">
-<img src="https://avatars2.githubusercontent.com/u/65402851?s=800&v=4"/>
-<b>X Port Forward Server</b>
+<b>X Port Forward Server</b><br>
 <b>Golang 处女作,欢迎提交PR</b>
 </p>
 
