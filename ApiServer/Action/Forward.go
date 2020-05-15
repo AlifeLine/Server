@@ -34,11 +34,11 @@ func Forward_Add(params map[string]interface{},db *gorm.DB) map[string]interface
 	}
 	_ = db.Table("forwards").Where("forward_name = ?", ForwardName).Find(&ForwardExistDbInfo)
 	if ForwardExistDbInfo != (DbTables.Forward{}){
-		return map[string]interface{}{"Status":"error","Code":18,"Message":"Forward Found"}
+		return map[string]interface{}{"Status":"error","Code":27,"Message":"Forward Found"}
 	}
 	_ = db.Table("forwards").Where("listen_port = ?", ListenPortInt).Find(&ForwardDbPortInfo)
 	if ForwardDbPortInfo != (DbTables.Forward{}){
-		return map[string]interface{}{"Status":"error","Code":24,"Message":"Listen Port Exist"}
+		return map[string]interface{}{"Status":"error","Code":28,"Message":"Listen Port Exist"}
 	}
 	DbErr := db.Table("forwards").Create(&DbTables.Forward{ForwardName:ForwardName,ProxyIP:ProxyIP,ProxyPort:ProxyPortInt,ListenIP:ListenIP,ListenPort:ListenPortInt,MaxConnNum:&MaxConnNumInt64,ForwardType:ForwardType,RateLimit:&RateLimitInt64,Status:"ok"}).Error
 	if DbErr != nil{
@@ -82,7 +82,7 @@ func Forward_Edit(params map[string]interface{},db *gorm.DB) map[string]interfac
 		var ForwardDbPortInfo DbTables.Forward
 		_ = db.Table("forwards").Where("listen_port = ?", ListenPortInt).Find(&ForwardDbPortInfo)
 		if ForwardDbPortInfo != (DbTables.Forward{}){
-			return map[string]interface{}{"Status":"error","Code":23,"Message":"Listen Port Exist"}
+			return map[string]interface{}{"Status":"error","Code":29,"Message":"Listen Port Exist"}
 		}
 	}
 	MaxConnNum,_ := params["maxconnnum"].(float64)
@@ -189,11 +189,11 @@ func Forward_GetTrafficLogs(params map[string]interface{},db *gorm.DB) map[strin
 	var ForwardTrafficLogsDbInfo []DbTables.TrafficLog
 	ForwardName,_ := params["forwardname"].(string)
 	if ForwardName == ""{
-		return map[string]interface{}{"Status":"error","Code":15,"Message":"Incomplete parameters"}
+		return map[string]interface{}{"Status":"error","Code":18,"Message":"Incomplete parameters"}
 	}else{
 		_ = db.Table("forwards").Where("forward_name = ?", ForwardName).Find(&ForwardDbInfo)
 		if ForwardDbInfo == (DbTables.Forward{}){
-			return map[string]interface{}{"Status":"error","Code":16,"Message":"Forward Not Found"}
+			return map[string]interface{}{"Status":"error","Code":19,"Message":"Forward Not Found"}
 		}
 		if GetUnReportLog,_ := params["un_report_log"].(bool);GetUnReportLog{
 			_ = db.Table("traffic_logs").Where("forward_name = ?", ForwardName).Where("report_status = ?", "wait").Find(&ForwardTrafficLogsDbInfo)
@@ -201,23 +201,37 @@ func Forward_GetTrafficLogs(params map[string]interface{},db *gorm.DB) map[strin
 			_ = db.Table("traffic_logs").Where("forward_name = ?", ForwardName).Find(&ForwardTrafficLogsDbInfo)
 		}
 	}
-	return map[string]interface{}{"Status":"Success","Code":17,"Message":"Success","Info":ForwardTrafficLogsDbInfo}
+	return map[string]interface{}{"Status":"Success","Code":20,"Message":"Success","Info":ForwardTrafficLogsDbInfo}
 }
 
 func Forward_Bandwidth_Reset(params map[string]interface{},db *gorm.DB) map[string]interface{}{
 	var ForwardDbInfo DbTables.Forward
 	ForwardName,_ := params["forwardname"].(string)
 	if ForwardName == ""{
-		return map[string]interface{}{"Status":"error","Code":19,"Message":"Incomplete parameters"}
+		return map[string]interface{}{"Status":"error","Code":21,"Message":"Incomplete parameters"}
 	}else{
 		_ = db.Table("forwards").Where("forward_name = ?", ForwardName).Find(&ForwardDbInfo)
 		if ForwardDbInfo == (DbTables.Forward{}){
-			return map[string]interface{}{"Status":"error","Code":20,"Message":"Forward Not Found"}
+			return map[string]interface{}{"Status":"error","Code":22,"Message":"Forward Not Found"}
 		}
 	}
 	DbErr := db.Table("forwards").Where("forward_name=?",ForwardName).Update("used_bandwidth",0).Error
 	if DbErr != nil{
-		return map[string]interface{}{"Status":"error","Code":21,"Message":"Update To Database Error: " + DbErr.Error()}
+		return map[string]interface{}{"Status":"error","Code":23,"Message":"Update To Database Error: " + DbErr.Error()}
 	}
-	return map[string]interface{}{"Status":"Success","Code":22,"Message":"Success"}
+	return map[string]interface{}{"Status":"Success","Code":24,"Message":"Success"}
+}
+
+func Forward_Reload(params map[string]interface{},db *gorm.DB) map[string]interface{}{
+	var ForwardDbInfo DbTables.Forward
+	ForwardName,_ := params["forwardname"].(string)
+	if ForwardName == ""{
+		return map[string]interface{}{"Status":"error","Code":25,"Message":"Incomplete parameters"}
+	}else{
+		_ = db.Table("forwards").Where("forward_name = ?", ForwardName).Find(&ForwardDbInfo)
+		if ForwardDbInfo == (DbTables.Forward{}){
+			return map[string]interface{}{"Status":"error","Code":26,"Message":"Forward Not Found"}
+		}
+	}
+	return map[string]interface{}{"pfsync_need":"have","action_name":"forward_reload","pf_name":ForwardName}
 }

@@ -7,5 +7,5 @@ import (
 )
 
 func Server_Info() map[string]interface{}{
-	return map[string]interface{}{"Status":"Success","Code":18,"Message":"Success","SoftVersion":XConfig.Version,"ServerTime":int64(time.Now().Unix()),"Author":"Flyqie"}
+	return map[string]interface{}{"Status":"Success","Code":30,"Message":"Success","SoftVersion":XConfig.Version,"ServerTime":int64(time.Now().Unix()),"Author":"Flyqie"}
 }
