@@ -37,7 +37,7 @@
 
 ```powershell
 1.前往Release下载已经编译好的二进制(_debug为Debug版本,会显示所有报错信息并在11111端口开启pprof监听,_nodebug版本为生产环境版本,不会显示报错信息,也不会在11111端口监听)或自行编译(本项目使用Go Modules)
-2.chmod +x 755 /[File DIR]/XPortForward #设置执行权限
+2.chmod +x 755 /[File DIR]/XPortForward_* #设置执行权限
 ```
 
 ### 4.配置config.ini
