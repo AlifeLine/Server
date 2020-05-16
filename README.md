@@ -61,6 +61,7 @@ password=
 # Mysql链接地址,username为Mysql用户名,password为对应的Mysql密码,127.0.0.1为数据库地址,dbname为数据库名称,具体可参考Gorm相关页面
 url=username:password@(127.0.0.1)/dbname?charset=utf8&parseTime=True&loc=Local
 ```
+config.ini请放置在同X Port Forward 二进制目录,运行时会自动读取
 
 ### 5.启动
 
