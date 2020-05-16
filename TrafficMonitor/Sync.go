@@ -71,10 +71,9 @@ func Sync_Traffic_Remote_Timer(db *gorm.DB,MainExitCtx context.Context,conf *XCo
 					if _,UsedBandwidthExist := ReportInfo["UsedBandwidth"].(map[string]float64)[v.ForwardName]; !UsedBandwidthExist{
 						var ForwardInfo DbTables.Forward
 						_ = db.Table("forwards").Where("forward_name = ?", v.ForwardName).Find(&ForwardInfo)
-						if ForwardInfo == (DbTables.Forward{}) {
-							continue
+						if ForwardInfo != (DbTables.Forward{}) {
+							ReportInfo["UsedBandwidth"].(map[string]float64)[v.ForwardName] = *ForwardInfo.UsedBandwidth
 						}
-						ReportInfo["UsedBandwidth"].(map[string]float64)[v.ForwardName] = *ForwardInfo.UsedBandwidth
 					}
 					ReportInfoMap := map[string]interface{}{}
 					ReportInfoMap["Time"] = v.HourTime

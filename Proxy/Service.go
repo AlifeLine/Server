@@ -88,7 +88,7 @@ func Service_Sync(wg *sync.WaitGroup,ProxyList map[string]*TypeDefine.ProxyData,
 					if ProxyMapData,ProxyMapDataExist := ProxyList[(PortSyncChannelData["pfname"])]; ProxyMapDataExist{
 						if ProxyMapData.Status == "running"{
 							// 同步流量数据到数据库
-							// TrafficMonitor.Monitor(ProxyMapData.DbData,RedisPool,TrafficSyncData,(*ProxyList)[(PortSyncChannelData["pfname"])],false)
+							// TrafficMonitor.Monitor(ProxyMapData.DbData,RedisClient,TrafficSyncData,ProxyList[(PortSyncChannelData["pfname"])],false)
 							(*ProxyMapData.Service).Stop(false,&sync.WaitGroup{})
 						}
 						ProxyList[(PortSyncChannelData["pfname"])] = &TypeDefine.ProxyData{}

@@ -1,6 +1,7 @@
 package ApiServer
 
 import (
+	"XPortForward/TypeDefine"
 	"XPortForward/XConfig"
 	_ "XPortForward/DbTables"
 	"context"
@@ -19,11 +20,14 @@ import (
 	_ "XPortForward/ApiServer/Action"
 	// "github.com/pascaldekloe/latest"
 )
+
 type ApiHandle struct {
 	AuthKey string
 	db *gorm.DB
 	PortSyncChannel chan interface{}
 	RedisClient *redis.Client
+	TrafficSyncData chan interface{}
+	ProxyDataList map[string]*TypeDefine.ProxyData
 }
 
 type ResultData struct{
@@ -75,34 +79,67 @@ func (ah *ApiHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	ActionSetting := ActionList[r.URL.Query().Get("action")]
+	Callah := &TypeDefine.ApiHandle{AuthKey:ah.AuthKey,PortSyncChannel:ah.PortSyncChannel,TrafficSyncData:ah.TrafficSyncData,ProxyDataList:ah.ProxyDataList}
 	if len(ActionCallParameter) != 0{
-		//很不优雅的写法,TODO
+		//很不优雅的写法,TODO,暂时没找到合适的方法
 		if ActionSetting.DbNeed{
 			if ActionSetting.RedisNeed{
-				ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,ah.db,ah.RedisClient)
+				if ActionSetting.AhNeed{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,ah.db,ah.RedisClient,Callah)
+				}else{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,ah.db,ah.RedisClient)
+				}
 			}else{
-				ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,ah.db)
+				if ActionSetting.AhNeed{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,ah.db,Callah)
+				}else{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,ah.db)
+				}
 			}
 		}else{
 			if ActionSetting.RedisNeed{
-				ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,ah.RedisClient)
+				if ActionSetting.AhNeed{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,ah.RedisClient,Callah)
+				}else{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,ah.RedisClient)
+				}
 			}else{
-				ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter)
+				if ActionSetting.AhNeed{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter,Callah)
+				}else{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ActionCallParameter)
+				}
 			}
 		}
 	}else{
-		//很不优雅的写法,TODO
+		//很不优雅的写法,TODO,暂时没找到合适的方法
 		if ActionSetting.DbNeed{
 			if ActionSetting.RedisNeed{
-				ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ah.db,ah.RedisClient)
+				if ActionSetting.AhNeed{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ah.db,ah.RedisClient,Callah)
+				}else{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ah.db,ah.RedisClient)
+				}
 			}else{
-				ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ah.db)
+				if ActionSetting.AhNeed{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ah.db,ah)
+				}else{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ah.db)
+				}
 			}
 		}else{
 			if ActionSetting.RedisNeed{
-				ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ah.RedisClient)
+				if ActionSetting.AhNeed{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ah.RedisClient,Callah)
+				}else{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),ah.RedisClient)
+				}
 			}else{
-				ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"))
+				if ActionSetting.AhNeed{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"),Callah)
+				}else{
+					ActionCallResult,ActionCallError = FuncMap.Call(r.URL.Query().Get("action"))
+				}
 			}
 		}
 	}
@@ -114,7 +151,6 @@ func (ah *ApiHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}else{
 		_,err := w.Write(ah.ResultGen(ResultData{200,"Success",ActionCallResult[0].Interface()},false))
 		if err != nil && XConfig.Debug{
-			// Debug 模式下显示Send的具体Error
 			log.Println("Action Result Send Error: " + err.Error())
 		}
 	}
@@ -133,12 +169,23 @@ func (ah *ApiHandle) ResultGen(info ResultData,IsErr bool) ([]byte){
 			time.Sleep(time.Second*6)
 			timeout <- true
 		}()
+		AnotherDataMap := map[string]interface{}{}
+		if Anotherdata,_:= TaskInfo["data"]; Anotherdata != nil{
+			AnotherDataMap,_ = Anotherdata.(map[string]interface{})
+		}
 		select {
 		case <-timeout:
-			info = ResultData{200,"Sync Error",map[string]interface{}{"Status":"error","Code":0,"message":"Sync Error: Time out to channel add data,Please Manual Reload This Forward"}}
+			if len(AnotherDataMap) == 0{
+				info = ResultData{200,"Sync Error",map[string]interface{}{"Status":"error","Code":0,"message":"Sync Error: Time out to channel add data,Please Manual Reload This Forward"}}
+			}else{
+				info = ResultData{200,"Sync Error",map[string]interface{}{"Status":"error","Code":0,"message":"Sync Error: Time out to channel add data,Please Manual Reload This Forward","Data":AnotherDataMap}}
+			}
 		case ah.PortSyncChannel <- map[string]string{"action":TaskInfo["action_name"].(string),"pfname":TaskInfo["pf_name"].(string)}:
-			info = ResultData{200,"Success",map[string]interface{}{"Status":"Success"}}
-
+			if len(AnotherDataMap) == 0{
+				info = ResultData{200,"Success",map[string]interface{}{"Status":"Success"}}
+			}else{
+				info = ResultData{200,"Success",map[string]interface{}{"Status":"Success","Data":AnotherDataMap}}
+			}
 		}
 	}
 	Encodejson,Encodeerr := json.Marshal(info)
@@ -150,12 +197,12 @@ func (ah *ApiHandle) ResultGen(info ResultData,IsErr bool) ([]byte){
 	}
 }
 
-func Start_api_server(AuthKey string,db *gorm.DB,MainExitCtx context.Context,wg *sync.WaitGroup,PortSyncChannel chan interface{},RedisClient *redis.Client){
+func Start_api_server(AuthKey string,db *gorm.DB,MainExitCtx context.Context,wg *sync.WaitGroup,PortSyncChannel chan interface{},RedisClient *redis.Client,TrafficSyncData chan interface{},ProxyDataList map[string]*TypeDefine.ProxyData){
 	//定义可用Action及相关映射
 	FuncMap,ActionList = Action_meta()
 	//启动http服务器
 	mux := http.NewServeMux()
-	mux.Handle("/", &ApiHandle{AuthKey,db,PortSyncChannel,RedisClient})
+	mux.Handle("/", &ApiHandle{AuthKey,db,PortSyncChannel,RedisClient,TrafficSyncData,ProxyDataList})
 	server := &http.Server{
 		Addr:         ":2333",
 		Handler:      mux,

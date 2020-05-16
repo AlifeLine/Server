@@ -87,7 +87,7 @@ func main(){
 	wg.Add(2)
 	go Proxy.Service(db,MainExitCtx,PortSyncChannel,&wg,RedisClient,ProxyDataList,TrafficSyncData)
 	wg.Add(1)
-	go ApiServer.Start_api_server(Xconf.Get("system","authkey"),db,MainExitCtx,&wg,PortSyncChannel,RedisClient)
+	go ApiServer.Start_api_server(Xconf.Get("system","authkey"),db,MainExitCtx,&wg,PortSyncChannel,RedisClient,TrafficSyncData,ProxyDataList)
 	wg.Add(1)
 	go TrafficMonitor.StartTrafficMonitor(db,MainExitCtx,Xconf,&wg,RedisClient,&ProxyDataList,TrafficSyncData)
 	go OsSignalListen(OsSignal,MainExitCtx,MainExitFunction)

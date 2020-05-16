@@ -3,6 +3,9 @@ package Action
 
 import (
 	"XPortForward/DbTables"
+	"XPortForward/TrafficMonitor"
+	"XPortForward/TypeDefine"
+	"github.com/go-redis/redis/v7"
 	"github.com/jinzhu/gorm"
 )
 
@@ -115,8 +118,9 @@ func Forward_Edit(params map[string]interface{},db *gorm.DB) map[string]interfac
 	return map[string]interface{}{"pfsync_need":"have","action_name":"forward_reload","pf_name":ForwardName}
 }
 
-func Forward_Del(params map[string]interface{},db *gorm.DB) map[string]interface{}{
+func Forward_Del(params map[string]interface{},db *gorm.DB,RedisClient *redis.Client,ah *TypeDefine.ApiHandle) map[string]interface{}{
 	var ForwardDbInfo DbTables.Forward
+	var TrafficInfo map[string]interface{}
 	ForwardName,_ := params["forwardname"].(string)
 	if ForwardName == ""{
 		return map[string]interface{}{"Status":"error","Code":8,"Message":"Incomplete parameters"}
@@ -135,7 +139,13 @@ func Forward_Del(params map[string]interface{},db *gorm.DB) map[string]interface
 	if DbErrTrafficLog != nil{
 		return map[string]interface{}{"Status":"error","Code":10,"Message":"Delete To Database Error(Traffic Log): " + DbErrTrafficLog.Error()}
 	}
-	return map[string]interface{}{"pfsync_need":"have","action_name":"forward_delete","pf_name":ForwardName}
+	//TODO,暂时没找到合适的方法
+	if _,ProxyDataExist := ah.ProxyDataList[ForwardDbInfo.ForwardName];ProxyDataExist{
+		TrafficInfo = TrafficMonitor.Monitor(ForwardDbInfo,RedisClient,ah.TrafficSyncData,ah.ProxyDataList[ForwardDbInfo.ForwardName],true)
+	}else{
+		TrafficInfo = map[string]interface{}{"ForwardName":ForwardDbInfo.ForwardName,"TrafficAll":0,"UploadBandwidth":0,"DownloadBandwidth":0,"HourTrafficBandwidth":0}
+	}
+	return map[string]interface{}{"pfsync_need":"have","action_name":"forward_delete","pf_name":ForwardName,"data":TrafficInfo}
 }
 
 func Forward_StatusChange(params map[string]interface{},db *gorm.DB) map[string]interface{}{
@@ -234,4 +244,18 @@ func Forward_Reload(params map[string]interface{},db *gorm.DB) map[string]interf
 		}
 	}
 	return map[string]interface{}{"pfsync_need":"have","action_name":"forward_reload","pf_name":ForwardName}
+}
+
+func Forward_DelSync(params map[string]interface{},db *gorm.DB) map[string]interface{}{
+	var ForwardDbInfo DbTables.Forward
+	ForwardName,_ := params["forwardname"].(string)
+	if ForwardName == ""{
+		return map[string]interface{}{"Status":"error","Code":31,"Message":"Incomplete parameters"}
+	}else{
+		_ = db.Table("forwards").Where("forward_name = ?", ForwardName).Find(&ForwardDbInfo)
+		if ForwardDbInfo != (DbTables.Forward{}){
+			return map[string]interface{}{"Status":"error","Code":32,"Message":"Forward Found"}
+		}
+	}
+	return map[string]interface{}{"pfsync_need":"have","action_name":"forward_delete","pf_name":ForwardName}
 }
