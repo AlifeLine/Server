@@ -25,6 +25,7 @@ func Action_meta() (Funcmap.Funcs,map[string]ActionInfoMap){
 	ActionData["reset_forward_bandwidth"] = ActionInfoMap{Action.Forward_Bandwidth_Reset,false,true,false}
 	ActionData["reload_forward"] = ActionInfoMap{Action.Forward_Reload,false,true,false}
 	ActionData["forward_del_sync"] = ActionInfoMap{Action.Forward_DelSync,false,true,false}
+	ActionData["forward_proxy_status"] = ActionInfoMap{Action.Forward_Proxy_Status,false,false,true}
 	//Server相关Function
 	ActionData["server_info"] = ActionInfoMap{Action.Server_Info,false,false,false}
 	// Action Define End

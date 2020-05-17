@@ -141,7 +141,11 @@ func Forward_Del(params map[string]interface{},db *gorm.DB,RedisClient *redis.Cl
 	}
 	//TODO,暂时没找到合适的方法
 	if _,ProxyDataExist := ah.ProxyDataList[ForwardDbInfo.ForwardName];ProxyDataExist{
-		TrafficInfo = TrafficMonitor.Monitor(ForwardDbInfo,RedisClient,ah.TrafficSyncData,ah.ProxyDataList[ForwardDbInfo.ForwardName],true)
+		if ah.ProxyDataList[ForwardDbInfo.ForwardName].Status == "running"{
+			TrafficInfo = TrafficMonitor.Monitor(ForwardDbInfo,RedisClient,ah.TrafficSyncData,ah.ProxyDataList[ForwardDbInfo.ForwardName],true)
+		}else{
+			TrafficInfo = map[string]interface{}{"ForwardName":ForwardDbInfo.ForwardName,"TrafficAll":0,"UploadBandwidth":0,"DownloadBandwidth":0,"HourTrafficBandwidth":0}
+		}
 	}else{
 		TrafficInfo = map[string]interface{}{"ForwardName":ForwardDbInfo.ForwardName,"TrafficAll":0,"UploadBandwidth":0,"DownloadBandwidth":0,"HourTrafficBandwidth":0}
 	}
@@ -258,4 +262,23 @@ func Forward_DelSync(params map[string]interface{},db *gorm.DB) map[string]inter
 		}
 	}
 	return map[string]interface{}{"pfsync_need":"have","action_name":"forward_delete","pf_name":ForwardName}
+}
+
+func Forward_Proxy_Status(params map[string]interface{},ah *TypeDefine.ApiHandle) map[string]interface{}{
+	var ProxyStatus string
+	ForwardName,_ := params["forwardname"].(string)
+	if ForwardName == ""{
+		return map[string]interface{}{"Status":"error","Code":33,"Message":"Incomplete parameters"}
+	}
+	//TODO,暂时没找到合适的方法
+	if _,ProxyDataExist := ah.ProxyDataList[ForwardName];ProxyDataExist{
+		if ah.ProxyDataList[ForwardName].Status == "running"{
+			ProxyStatus = "running"
+		}else{
+			ProxyStatus = "stopped"
+		}
+	}else{
+		ProxyStatus = "Pstopped"
+	}
+	return map[string]interface{}{"Status":"Success","Code":34,"Message":"Success","ForwardStatus":ProxyStatus}
 }
